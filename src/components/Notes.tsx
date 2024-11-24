@@ -113,8 +113,7 @@ export default function Notes() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Notes</h1>
+        <div className="flex justify-end items-center mb-8">
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">
               {userEmail}
