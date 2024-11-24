@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { PlusCircle, Trash2, LogOut } from 'lucide-react';
+import { PlusCircle, Trash2, LogOut, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Note {
@@ -15,10 +15,14 @@ export default function Notes() {
   const [newNote, setNewNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>('');
+  const [displayName, setDisplayName] = useState('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
 
   useEffect(() => {
     fetchNotes();
     fetchUserEmail();
+    fetchDisplayName();
   }, []);
 
   async function fetchNotes() {
@@ -45,6 +49,26 @@ export default function Notes() {
       }
     } catch (error: any) {
       toast.error('Error fetching user info');
+    }
+  }
+
+  async function fetchDisplayName() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) throw error;
+        if (data?.display_name) {
+          setDisplayName(data.display_name);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error fetching display name:', error);
     }
   }
 
@@ -113,10 +137,72 @@ export default function Notes() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-end items-center mb-8">
+        <div className="flex justify-between items-center mb-8">
+          <div className="relative">
+            <button
+              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <Settings className="h-5 w-5 text-gray-600" />
+            </button>
+            
+            {isSettingsOpen && (
+              <div className="absolute left-0 mt-2 w-64 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                <div className="p-4">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Settings</h3>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Display Name</label>
+                      {isEditingName ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            className="flex-1 text-sm rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                            placeholder={userEmail}
+                          />
+                          <button
+                            onClick={async () => {
+                              try {
+                                const { data: { user } } = await supabase.auth.getUser();
+                                if (user) {
+                                  const { error } = await supabase
+                                    .from('profiles')
+                                    .upsert({ 
+                                      id: user.id, 
+                                      display_name: displayName || userEmail 
+                                    });
+                                  if (error) throw error;
+                                  setIsEditingName(false);
+                                  toast.success('Display name updated!');
+                                }
+                              } catch (error: any) {
+                                toast.error('Failed to update display name');
+                              }
+                            }}
+                            className="px-2 py-1 text-xs font-medium text-white bg-purple-600 rounded hover:bg-purple-700"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setIsEditingName(true)}
+                          className="px-2 py-1 text-xs font-medium text-gray-500 rounded hover:text-purple-600"
+                        >
+                          Change Display Name
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">
-              {userEmail}
+              {displayName || userEmail}
             </span>
             <button
               onClick={handleSignOut}
