@@ -14,9 +14,11 @@ export default function Notes() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState('');
   const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState<string>('');
 
   useEffect(() => {
     fetchNotes();
+    fetchUserEmail();
   }, []);
 
   async function fetchNotes() {
@@ -32,6 +34,17 @@ export default function Notes() {
       toast.error(error.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchUserEmail() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setUserEmail(user.email);
+      }
+    } catch (error: any) {
+      toast.error('Error fetching user info');
     }
   }
 
@@ -102,13 +115,18 @@ export default function Notes() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Notes</h1>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center px-4 py-2 text-sm text-red-600 hover:text-red-700"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </button>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              {userEmail}
+            </span>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center px-4 py-2 text-sm text-red-600 hover:text-red-700"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </button>
+          </div>
         </div>
 
         <form onSubmit={addNote} className="mb-8">
