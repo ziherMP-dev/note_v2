@@ -8,12 +8,16 @@ import { registerSW } from 'virtual:pwa-register';
 registerSW({
   immediate: true,
   onRegistered() {
+    console.log('Service Worker registered');
     if ('Notification' in window) {
       Notification.requestPermission().then((permission) => {
+        console.log('Notification permission status:', permission);
         if (permission === 'granted') {
           console.log('Notification permission granted');
         }
       });
+    } else {
+      console.log('Notifications not supported in this browser');
     }
   }
 });

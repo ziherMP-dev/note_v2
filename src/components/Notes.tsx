@@ -13,10 +13,22 @@ interface Note {
 }
 
 const sendNotification = async (note: Note) => {
-  if (!('Notification' in window)) return;
+  console.log('Attempting to send notification for note:', note);
+  
+  if (!('Notification' in window)) {
+    console.log('Notifications not supported');
+    return;
+  }
   
   try {
+    console.log('Checking notification permission:', Notification.permission);
+    if (Notification.permission !== 'granted') {
+      console.log('Notification permission not granted');
+      return;
+    }
+
     const registration = await navigator.serviceWorker.ready;
+    console.log('Service Worker ready:', registration);
     
     await registration.showNotification('Note Reminder', {
       body: note.content,
@@ -31,11 +43,13 @@ const sendNotification = async (note: Note) => {
         }
       ]
     });
+    console.log('Notification sent successfully');
 
     await supabase
       .from('notes')
       .update({ notification_sent: true })
       .eq('id', note.id);
+    console.log('Database updated - notification marked as sent');
 
   } catch (error) {
     console.error('Error sending notification:', error);
@@ -62,6 +76,7 @@ export default function Notes() {
     const notesWithNotifications = notes.filter(
       note => note.notification_time && !note.notification_sent
     );
+    console.log('Notes with pending notifications:', notesWithNotifications);
 
     if (notesWithNotifications.length === 0) return;
 
@@ -70,8 +85,10 @@ export default function Notes() {
         if (!note.notification_time || note.notification_sent) return;
         
         const timeLeft = new Date(note.notification_time).getTime() - new Date().getTime();
+        console.log(`Time left for note ${note.id}:`, timeLeft);
         
         if (timeLeft <= 0) {
+          console.log('Triggering notification for note:', note.id);
           sendNotification(note);
           setNotes(currentNotes =>
             currentNotes.map(n =>
