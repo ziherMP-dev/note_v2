@@ -3,7 +3,9 @@ CREATE TABLE notes (
     id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     content TEXT NOT NULL,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    notification_time TIMESTAMP WITH TIME ZONE,
+    notification_sent BOOLEAN DEFAULT FALSE
 );
 
 -- Enable Row Level Security
