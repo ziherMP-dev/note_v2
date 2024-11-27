@@ -2,39 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { PlusCircle, Trash2, LogOut, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { requestNotificationPermission, scheduleNotification } from '../lib/notifications';
 
 interface Note {
   id: number;
   content: string;
   created_at: string;
   user_id: string;
-  notification_time?: string;
 }
 
 export default function Notes() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState('');
-  const [notificationTime, setNotificationTime] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>('');
   const [displayName, setDisplayName] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     fetchNotes();
     fetchUserEmail();
     fetchDisplayName();
-  }, []);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
   }, []);
 
   async function fetchNotes() {
@@ -89,42 +77,23 @@ export default function Notes() {
     if (!newNote.trim()) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) throw new Error('User not authenticated');
 
-      if (notificationTime && Notification.permission !== 'granted') {
-        try {
-          await requestNotificationPermission();
-        } catch (error) {
-          toast.error('Failed to enable notifications');
-          return;
-        }
-      }
-
-      const notificationDate = notificationTime ? new Date(notificationTime) : null;
-      const utcNotificationTime = notificationDate 
-        ? notificationDate.toISOString()
-        : null;
-
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from('notes')
         .insert([{ 
           content: newNote,
-          user_id: user.id,
-          notification_time: utcNotificationTime
-        }])
-        .select()
-        .single();
+          user_id: user.id
+        }]);
 
       if (error) throw error;
       
-      if (notificationTime) {
-        scheduleNotification(newNote, notificationTime);
-      }
-
       toast.success('Note added successfully!');
       setNewNote('');
-      setNotificationTime('');
       fetchNotes();
     } catch (error: any) {
       toast.error(error.message);
@@ -155,33 +124,6 @@ export default function Notes() {
     } catch (error: any) {
       toast.error(error.message);
     }
-  }
-
-  function formatLocalDateTime(dateString: string) {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = date.toLocaleString('en-US', { month: 'long' });
-    const day = date.getDate();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    
-    return `${month} ${day}, ${year}, ${hours}:${minutes}`;
-  }
-
-  function formatTimeRemaining(notificationTime: string) {
-    const timeUntilNotification = new Date(notificationTime).getTime() - currentTime.getTime();
-    
-    if (timeUntilNotification <= 0) {
-      return null;
-    }
-    
-    if (timeUntilNotification < 60000) { // less than 1 minute (in milliseconds)
-      const seconds = Math.ceil(timeUntilNotification / 1000);
-      return `(in ${seconds} seconds)`;
-    }
-    
-    const minutes = Math.ceil(timeUntilNotification / (1000 * 60));
-    return `(in ${minutes} minutes)`;
   }
 
   if (loading) {
@@ -273,29 +215,21 @@ export default function Notes() {
         </div>
 
         <form onSubmit={addNote} className="mb-8">
-          <div className="space-y-4">
-            <div className="flex gap-4">
-              <input
-                type="text"
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                placeholder="Write your note here..."
-                className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-              />
-              <input
-                type="datetime-local"
-                value={notificationTime}
-                onChange={(e) => setNotificationTime(e.target.value)}
-                className="rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-              />
-              <button
-                type="submit"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-              >
-                <PlusCircle className="h-5 w-5 mr-2" />
-                Add Note
-              </button>
-            </div>
+          <div className="flex gap-4">
+            <input
+              type="text"
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              placeholder="Write your note here..."
+              className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+            />
+            <button
+              type="submit"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+            >
+              <PlusCircle className="h-5 w-5 mr-2" />
+              Add Note
+            </button>
           </div>
         </form>
 
@@ -306,19 +240,7 @@ export default function Notes() {
               className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200"
             >
               <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <p className="text-gray-800 whitespace-pre-wrap">{note.content}</p>
-                  {note.notification_time && (
-                    <p className="text-sm text-purple-600 mt-2">
-                      Reminder: {formatLocalDateTime(note.notification_time)}
-                      {formatTimeRemaining(note.notification_time) && (
-                        <span className="ml-2">
-                          {formatTimeRemaining(note.notification_time)}
-                        </span>
-                      )}
-                    </p>
-                  )}
-                </div>
+                <p className="text-gray-800 whitespace-pre-wrap">{note.content}</p>
                 <button
                   onClick={() => deleteNote(note.id)}
                   className="text-red-500 hover:text-red-700 p-1"
@@ -327,7 +249,13 @@ export default function Notes() {
                 </button>
               </div>
               <p className="text-sm text-gray-500 mt-2">
-                {formatLocalDateTime(note.created_at)}
+                {new Date(note.created_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </p>
             </div>
           ))}
