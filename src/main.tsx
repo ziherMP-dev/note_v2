@@ -8,16 +8,19 @@ import { registerSW } from 'virtual:pwa-register';
 registerSW({
   immediate: true,
   onRegistered() {
-    console.log('Service Worker registered');
-    if ('Notification' in window) {
-      Notification.requestPermission().then((permission) => {
-        console.log('Notification permission status:', permission);
-        if (permission === 'granted') {
-          console.log('Notification permission granted');
-        }
-      });
-    } else {
-      console.log('Notifications not supported in this browser');
+    // Request notification permissions on startup
+    const requestNotificationPermission = async () => {
+      try {
+        const permission = await Notification.requestPermission();
+        console.log(`Notification permission status: ${permission}`);
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
+      }
+    };
+
+    // Check if it's a PWA
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      requestNotificationPermission();
     }
   }
 });

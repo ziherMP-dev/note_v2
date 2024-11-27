@@ -71,8 +71,13 @@ const sendNotification = async (note: Note) => {
     }
 
     if (Notification.permission !== 'granted') {
-      debugAlert('Notification permission not granted');
-      return;
+      debugAlert('Requesting notification permission...');
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        debugAlert('Notification permission denied');
+        return;
+      }
+      debugAlert('Notification permission granted!');
     }
 
     const registration = await navigator.serviceWorker.ready;
@@ -286,6 +291,24 @@ export default function Notes() {
     }
   }
 
+  const requestNotificationPermission = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      debugAlert({
+        message: 'Notification Permission Request Result',
+        permission,
+        isGranted: permission === 'granted'
+      });
+      
+      // Refresh the page if permission is granted to ensure everything is initialized
+      if (permission === 'granted') {
+        window.location.reload();
+      }
+    } catch (error) {
+      debugAlert('Error requesting permission:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -303,7 +326,15 @@ export default function Notes() {
             <ol className="list-decimal ml-4 mt-2">
               <li>Add this app to your home screen</li>
               <li>Open the app from your home screen</li>
-              <li>Enable notifications in iOS Settings for this app</li>
+              <li>
+                Enable notifications:
+                <button
+                  onClick={requestNotificationPermission}
+                  className="ml-2 px-2 py-1 text-xs font-medium text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100"
+                >
+                  Request Permission
+                </button>
+              </li>
             </ol>
           </p>
         </div>
@@ -374,21 +405,10 @@ export default function Notes() {
                       Debug PWA Status
                     </button>
                     <button
-                      onClick={() => {
-                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                        const isStandalone = 'standalone' in window.navigator && (window.navigator as any).standalone === true;
-                        debugAlert({
-                          userAgent: navigator.userAgent,
-                          isIOS,
-                          isStandalone,
-                          hasNotificationAPI: 'Notification' in window,
-                          notificationPermission: Notification.permission,
-                          isPWA: window.matchMedia('(display-mode: standalone)').matches
-                        });
-                      }}
+                      onClick={requestNotificationPermission}
                       className="px-2 py-1 text-xs font-medium text-gray-500 rounded hover:text-purple-600"
                     >
-                      Show Debug Info
+                      Request Notifications Permission
                     </button>
                   </div>
                 </div>
