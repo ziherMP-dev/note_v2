@@ -7,8 +7,7 @@ import { registerSW } from 'virtual:pwa-register';
 // Register service worker with notification support
 registerSW({
   immediate: true,
-  onRegistered(registration) {
-    // Request notification permissions
+  onRegistered() {
     if ('Notification' in window) {
       Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
