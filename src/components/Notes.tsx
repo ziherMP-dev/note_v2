@@ -12,11 +12,32 @@ interface Note {
   notification_sent: boolean;
 }
 
+const remoteLog = (...args: any[]) => {
+  const debugURL = 'https://debug.ziher.dev/log';
+  
+  fetch(debugURL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      timestamp: new Date().toISOString(),
+      logs: args
+    })
+  }).catch(() => {
+    // Silently fail if logging fails
+  });
+};
+
+const debugAlert = (...args: any[]) => {
+  alert(args.map(arg => 
+    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+  ).join('\n'));
+};
+
 const debugPWAStatus = () => {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isStandalone = 'standalone' in window.navigator && (window.navigator as any).standalone === true;
   
-  console.log({
+  debugAlert({
     userAgent: navigator.userAgent,
     isIOS,
     hasStandaloneProperty: 'standalone' in window.navigator,
@@ -27,47 +48,35 @@ const debugPWAStatus = () => {
 };
 
 const sendNotification = async (note: Note) => {
-  console.log('Attempting to send notification for note:', note);
-  
-  console.log('User Agent:', navigator.userAgent);
-  console.log('Is standalone property exists:', 'standalone' in window.navigator);
-  console.log('Standalone value:', (window.navigator as any).standalone);
-  
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isStandalone = 'standalone' in window.navigator && (window.navigator as any).standalone === true;
-  
-  console.log('Is iOS device:', isIOS);
-  console.log('Is running as PWA:', isStandalone);
-  
-  const isIOSPWA = isIOS && isStandalone;
-  console.log('Is iOS PWA:', isIOSPWA);
-
-  if (!('Notification' in window)) {
-    if (isIOSPWA) {
-      try {
-        new (window as any).Notification('Note Reminder', {
-          body: note.content,
-          icon: '/icon-512.png'
-        });
-        console.log('iOS notification sent');
-      } catch (error) {
-        console.error('iOS notification failed:', error);
+  try {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isStandalone = 'standalone' in window.navigator && (window.navigator as any).standalone === true;
+    
+    debugAlert({
+      message: 'Notification Debug Info',
+      isIOS,
+      isStandalone,
+      hasNotificationAPI: 'Notification' in window,
+      notificationPermission: Notification.permission,
+      noteDetails: {
+        id: note.id,
+        time: note.notification_time,
+        content: note.content.substring(0, 50) // First 50 chars
       }
+    });
+
+    if (!('Notification' in window)) {
+      debugAlert('Notifications not supported on this device/browser');
       return;
     }
-    console.log('Notifications not supported');
-    return;
-  }
-  
-  try {
-    console.log('Checking notification permission:', Notification.permission);
+
     if (Notification.permission !== 'granted') {
-      console.log('Notification permission not granted');
+      debugAlert('Notification permission not granted');
       return;
     }
 
     const registration = await navigator.serviceWorker.ready;
-    console.log('Service Worker ready:', registration);
+    remoteLog('Service Worker ready:', registration);
     
     await registration.showNotification('Note Reminder', {
       body: note.content,
@@ -81,16 +90,16 @@ const sendNotification = async (note: Note) => {
         }
       ]
     });
-    console.log('Notification sent successfully');
+    remoteLog('Notification sent successfully');
 
     await supabase
       .from('notes')
       .update({ notification_sent: true })
       .eq('id', note.id);
-    console.log('Database updated - notification marked as sent');
+    remoteLog('Database updated - notification marked as sent');
 
   } catch (error) {
-    console.error('Error sending notification:', error);
+    debugAlert('Error in sendNotification:', error);
   }
 };
 
@@ -119,7 +128,7 @@ export default function Notes() {
     const notesWithNotifications = notes.filter(
       note => note.notification_time && !note.notification_sent
     );
-    console.log('Notes with pending notifications:', notesWithNotifications);
+    remoteLog('Notes with pending notifications:', notesWithNotifications);
 
     if (notesWithNotifications.length === 0) return;
 
@@ -128,10 +137,10 @@ export default function Notes() {
         if (!note.notification_time || note.notification_sent) return;
         
         const timeLeft = new Date(note.notification_time).getTime() - new Date().getTime();
-        console.log(`Time left for note ${note.id}:`, timeLeft);
+        remoteLog(`Time left for note ${note.id}:`, timeLeft);
         
         if (timeLeft <= 0) {
-          console.log('Triggering notification for note:', note.id);
+          remoteLog('Triggering notification for note:', note.id);
           sendNotification(note);
           setNotes(currentNotes =>
             currentNotes.map(n =>
@@ -363,6 +372,23 @@ export default function Notes() {
                       className="px-2 py-1 text-xs font-medium text-gray-500 rounded hover:text-purple-600"
                     >
                       Debug PWA Status
+                    </button>
+                    <button
+                      onClick={() => {
+                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                        const isStandalone = 'standalone' in window.navigator && (window.navigator as any).standalone === true;
+                        debugAlert({
+                          userAgent: navigator.userAgent,
+                          isIOS,
+                          isStandalone,
+                          hasNotificationAPI: 'Notification' in window,
+                          notificationPermission: Notification.permission,
+                          isPWA: window.matchMedia('(display-mode: standalone)').matches
+                        });
+                      }}
+                      className="px-2 py-1 text-xs font-medium text-gray-500 rounded hover:text-purple-600"
+                    >
+                      Show Debug Info
                     </button>
                   </div>
                 </div>
