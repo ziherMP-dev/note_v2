@@ -12,16 +12,40 @@ interface Note {
   notification_sent: boolean;
 }
 
+const debugPWAStatus = () => {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone = 'standalone' in window.navigator && (window.navigator as any).standalone === true;
+  
+  console.log({
+    userAgent: navigator.userAgent,
+    isIOS,
+    hasStandaloneProperty: 'standalone' in window.navigator,
+    standaloneValue: (window.navigator as any).standalone,
+    isStandalone,
+    isIOSPWA: isIOS && isStandalone
+  });
+};
+
 const sendNotification = async (note: Note) => {
   console.log('Attempting to send notification for note:', note);
   
-  const isIOSPWA = window.navigator.standalone === true;
+  console.log('User Agent:', navigator.userAgent);
+  console.log('Is standalone property exists:', 'standalone' in window.navigator);
+  console.log('Standalone value:', (window.navigator as any).standalone);
+  
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone = 'standalone' in window.navigator && (window.navigator as any).standalone === true;
+  
+  console.log('Is iOS device:', isIOS);
+  console.log('Is running as PWA:', isStandalone);
+  
+  const isIOSPWA = isIOS && isStandalone;
   console.log('Is iOS PWA:', isIOSPWA);
 
   if (!('Notification' in window)) {
     if (isIOSPWA) {
       try {
-        new window.Notification('Note Reminder', {
+        new (window as any).Notification('Note Reminder', {
           body: note.content,
           icon: '/icon-512.png'
         });
@@ -49,7 +73,6 @@ const sendNotification = async (note: Note) => {
       body: note.content,
       icon: '/icon-512.png',
       badge: '/icon-512.png',
-      vibrate: [200, 100, 200],
       tag: `note-${note.id}`,
       actions: [
         {
@@ -335,6 +358,12 @@ export default function Notes() {
                         </button>
                       )}
                     </div>
+                    <button
+                      onClick={debugPWAStatus}
+                      className="px-2 py-1 text-xs font-medium text-gray-500 rounded hover:text-purple-600"
+                    >
+                      Debug PWA Status
+                    </button>
                   </div>
                 </div>
               </div>
