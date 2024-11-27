@@ -35,7 +35,17 @@ export default defineConfig({
             }
           }
         }]
-      }
+      },
+      devOptions: {
+        enabled: true
+      },
+      injectRegister: 'script',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js'
     })
-  ]
+  ],
+  define: {
+    'import.meta.env.VITE_VAPID_PUBLIC_KEY': JSON.stringify(process.env.VITE_VAPID_PUBLIC_KEY)
+  }
 });
