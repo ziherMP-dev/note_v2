@@ -1,39 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = 'https://gcqlkcoxvvtrrlcvbmol.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjcWxrY294dnZ0cnJsY3ZibW9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI0NTMyOTcsImV4cCI6MjA0ODAyOTI5N30.qELNipRHdmYieqQz8wzImnxv6vlPw4k8Xd26Hpm8C70';
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
-
-export async function saveSubscription(subscription: PushSubscription, userId: string) {
-  const { error } = await supabase
-    .from('push_subscriptions')
-    .upsert({
-      user_id: userId,
-      subscription: subscription,
-      created_at: new Date().toISOString()
-    });
-
-  if (error) throw error;
-}
-
-export async function requestNotificationPermission(userId: string) {
-  try {
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      throw new Error('Notification permission denied');
-    }
-
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: import.meta.env.VITE_VAPID_PUBLIC_KEY
-    });
-
-    await saveSubscription(subscription, userId);
-    return true;
-  } catch (error) {
-    console.error('Error requesting notification permission:', error);
-    return false;
-  }
-}

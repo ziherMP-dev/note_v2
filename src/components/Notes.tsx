@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { PlusCircle, Trash2, LogOut, Settings, Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { requestNotificationPermission } from '../lib/supabase';
 
 interface Note {
   id: number;
@@ -22,13 +21,11 @@ export default function Notes() {
   const [displayName, setDisplayName] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   useEffect(() => {
     fetchNotes();
     fetchUserEmail();
     fetchDisplayName();
-    checkNotificationStatus();
   }, []);
 
   useEffect(() => {
@@ -183,26 +180,6 @@ export default function Notes() {
       toast.success('Signed out successfully!');
     } catch (error: any) {
       toast.error(error.message);
-    }
-  }
-
-  async function checkNotificationStatus() {
-    const permission = Notification.permission;
-    setNotificationsEnabled(permission === 'granted');
-  }
-
-  async function enableNotifications() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const success = await requestNotificationPermission(user.id);
-      if (success) {
-        setNotificationsEnabled(true);
-        toast.success('Notifications enabled successfully!');
-      }
-    } catch (error: any) {
-      toast.error('Failed to enable notifications');
     }
   }
 
