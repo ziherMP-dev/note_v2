@@ -15,7 +15,22 @@ interface Note {
 const sendNotification = async (note: Note) => {
   console.log('Attempting to send notification for note:', note);
   
+  const isIOSPWA = window.navigator.standalone === true;
+  console.log('Is iOS PWA:', isIOSPWA);
+
   if (!('Notification' in window)) {
+    if (isIOSPWA) {
+      try {
+        new window.Notification('Note Reminder', {
+          body: note.content,
+          icon: '/icon-512.png'
+        });
+        console.log('iOS notification sent');
+      } catch (error) {
+        console.error('iOS notification failed:', error);
+      }
+      return;
+    }
     console.log('Notifications not supported');
     return;
   }
@@ -65,11 +80,16 @@ export default function Notes() {
   const [displayName, setDisplayName] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
+  const [showIOSPrompt, setShowIOSPrompt] = useState(false);
 
   useEffect(() => {
     fetchNotes();
     fetchUserEmail();
     fetchDisplayName();
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS && !('Notification' in window)) {
+      setShowIOSPrompt(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -244,6 +264,18 @@ export default function Notes() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+      {showIOSPrompt && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-sm text-yellow-700">
+            To receive notifications on iOS:
+            <ol className="list-decimal ml-4 mt-2">
+              <li>Add this app to your home screen</li>
+              <li>Open the app from your home screen</li>
+              <li>Enable notifications in iOS Settings for this app</li>
+            </ol>
+          </p>
+        </div>
+      )}
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div className="relative">

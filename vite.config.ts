@@ -15,6 +15,7 @@ export default defineConfig({
         theme_color: '#8B5CF6',
         background_color: '#ffffff',
         display: 'standalone',
+        permissions: ['notifications'],
         icons: [
           {
             src: '/icon-512.png',
