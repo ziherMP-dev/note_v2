@@ -416,7 +416,7 @@ export default function Notes() {
                 type="text"
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
-                placeholder="Write your note here..."
+                placeholder="Write your note here... v_7.0.0"
                 className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
               />
               <button
