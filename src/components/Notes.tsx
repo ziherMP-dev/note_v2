@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { PlusCircle, Trash2, LogOut, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { requestNotificationPermission, scheduleNotification } from '../lib/notifications';
 
 interface Note {
   id: number;
@@ -92,9 +93,10 @@ export default function Notes() {
       if (!user) throw new Error('User not authenticated');
 
       if (notificationTime && Notification.permission !== 'granted') {
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-          toast.error('Notification permission denied');
+        try {
+          await requestNotificationPermission();
+        } catch (error) {
+          toast.error('Failed to enable notifications');
           return;
         }
       }
@@ -104,13 +106,15 @@ export default function Notes() {
         ? notificationDate.toISOString()
         : null;
 
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('notes')
         .insert([{ 
           content: newNote,
           user_id: user.id,
           notification_time: utcNotificationTime
-        }]);
+        }])
+        .select()
+        .single();
 
       if (error) throw error;
       
@@ -124,19 +128,6 @@ export default function Notes() {
       fetchNotes();
     } catch (error: any) {
       toast.error(error.message);
-    }
-  }
-
-  function scheduleNotification(content: string, notificationTime: string) {
-    const timeUntilNotification = new Date(notificationTime).getTime() - new Date().getTime();
-    
-    if (timeUntilNotification > 0) {
-      setTimeout(() => {
-        new Notification('Note Reminder', {
-          body: content,
-          icon: '/icon-512.png'
-        });
-      }, timeUntilNotification);
     }
   }
 
