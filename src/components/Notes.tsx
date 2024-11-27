@@ -12,6 +12,36 @@ interface Note {
   notification_sent: boolean;
 }
 
+const sendNotification = async (note: Note) => {
+  if (!('Notification' in window)) return;
+  
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    
+    await registration.showNotification('Note Reminder', {
+      body: note.content,
+      icon: '/icon-512.png',
+      badge: '/icon-512.png',
+      vibrate: [200, 100, 200],
+      tag: `note-${note.id}`,
+      actions: [
+        {
+          action: 'open',
+          title: 'Open App'
+        }
+      ]
+    });
+
+    await supabase
+      .from('notes')
+      .update({ notification_sent: true })
+      .eq('id', note.id);
+
+  } catch (error) {
+    console.error('Error sending notification:', error);
+  }
+};
+
 export default function Notes() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState('');
@@ -36,16 +66,20 @@ export default function Notes() {
     if (notesWithNotifications.length === 0) return;
 
     const interval = setInterval(() => {
-      setNotes(currentNotes => 
-        currentNotes.map(note => {
-          if (!note.notification_time || note.notification_sent) return note;
-          const timeLeft = new Date(note.notification_time).getTime() - new Date().getTime();
-          if (timeLeft <= 0) {
-            return { ...note, notification_sent: true };
-          }
-          return note;
-        })
-      );
+      notesWithNotifications.forEach(note => {
+        if (!note.notification_time || note.notification_sent) return;
+        
+        const timeLeft = new Date(note.notification_time).getTime() - new Date().getTime();
+        
+        if (timeLeft <= 0) {
+          sendNotification(note);
+          setNotes(currentNotes =>
+            currentNotes.map(n =>
+              n.id === note.id ? { ...n, notification_sent: true } : n
+            )
+          );
+        }
+      });
     }, 1000);
 
     return () => clearInterval(interval);

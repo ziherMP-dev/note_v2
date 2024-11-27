@@ -40,7 +40,16 @@ export default defineConfig({
               statuses: [0, 200]
             }
           }
-        }]
+        }],
+        additionalManifestEntries: [
+          {
+            url: '/notification-click',
+            revision: '1'
+          }
+        ],
+        swDest: 'dist/sw.js',
+        clientsClaim: true,
+        skipWaiting: true
       }
     })
   ],
